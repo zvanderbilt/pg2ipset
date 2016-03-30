@@ -1,8 +1,9 @@
 # pg2ipset
 
 ========
-ABOUT (from original repo: https://github.com/ilikenwf/pg2ipset)
+ABOUT 
 ========
+(from original repo: https://github.com/ilikenwf/pg2ipset)
 
 Information:
 
