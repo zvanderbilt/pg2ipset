@@ -34,6 +34,9 @@ ENABLE_COUNTRY=1
 # enable tor blocks?
 ENABLE_TORBLOCK=1
 
+# enable whitelist? add whitelist to $LISTDIR/whitelist/whitelist.txt
+ENABLE_WHITELIST=1
+
 #cache a copy of the iptables rules
 IPTABLES=$(iptables-save)
 
@@ -123,6 +126,34 @@ if [ $ENABLE_TORBLOCK = 1 ]; then
   
   importList "tor" 0
 fi
+
+importWhitelist(){
+if [[ $ENABLE_WHITELIST = 1 ]]; then
+	  if [ -f $LISTDIR/whitelist/whitelist.txt ]; then
+		echo "Importing whitelist accepts..."
+		
+		ipset create -exist whitelist hash:net maxelem 4294967295
+		ipset create -exist whitelist-TMP hash:net maxelem 4294967295
+		ipset flush whitelist-TMP &> /dev/null
+
+		awk '!x[$0]++' $LISTDIR/whitelist/whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ whitelist\-TMP\ /" | ipset restore
+		
+		ipset swap whitelist whitelist-TMP &> /dev/null
+		ipset destroy whitelist-TMP &> /dev/null
+		
+		# only create if the iptables rules don't already exist
+		if ! echo $IPTABLES|grep -q "whitelist"; then
+		  iptables -I INPUT -m set --match-set whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
+		  iptables -I OUTPUT -m set --match-set whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
+		fi
+
+	  else
+		echo "List whitelist.txt does not exist."
+	  fi
+fi
+}
+
+importWhitelist
 
 function finish {
 	if pgrep "fail2ban" > /dev/null
