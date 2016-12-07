@@ -10,7 +10,7 @@ LISTDIR="/var/cache/blocklists"
 [ ! -d $LISTDIR ] && mkdir $LISTDIR
 
 # countries to block, must be lcase
-COUNTRIES=(tr cn sa sy ru ua hk id)
+COUNTRIES=(tr cn sa sy ru ua hk id jp)
 
 # bluetack lists to use - they now obfuscate these so get them from
 # https://www.iblocklist.com/lists.php
@@ -153,15 +153,33 @@ if [[ $ENABLE_WHITELIST = 1 ]]; then
 fi
 }
 
+importBlacklist(){
+if [[ $ENABLE_WHITELIST = 1 ]]; then
+          if [ -f $LISTDIR/blacklist/blacklist.txt ]; then
+                echo "Importing blacklist accepts..."
+                
+                ipset create -exist blacklist hash:net maxelem 4294967295
+                ipset create -exist blacklist-TMP hash:net maxelem 4294967295
+                ipset flush blacklist-TMP &> /dev/null
+
+                awk '!x[$0]++' $LISTDIR/blacklist/blacklist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ blacklist\-TMP\ /" | ipset restore
+                
+                ipset swap blacklist blacklist-TMP &> /dev/null
+                ipset destroy blacklist-TMP &> /dev/null
+                
+                # only create if the iptables rules don't already exist
+                if ! echo $IPTABLES|grep -q "blacklist"; then
+                  iptables -I INPUT -m set --match-set blacklist src -p tcp -m multiport --dports http,https -j ACCEPT
+                  iptables -I OUTPUT -m set --match-set blacklist dst -p tcp -m multiport --sports http,https -j ACCEPT
+                fi
+
+          else
+                echo "List blacklist.txt does not exist."
+          fi
+fi
+}
+
+
 importWhitelist
 
-function finish {
-	if pgrep "fail2ban" > /dev/null
-	then
-	    echo "Fail2ban Running, restarting..."
-	    /etc/init.d/fail2ban restart
-	else
-	    echo "Fail2ban not running, no further action required, if that is intended"
-	fi
-}
-trap finish EXIT
+importBlacklist
