@@ -118,7 +118,7 @@ fi
 
 if [ $ENABLE_TORBLOCK = 1 ]; then
   # get the tor lists and cat them into a single file
-  for ip in $(wget http://ipecho.net/plain -O - -q ; echo $4); do
+  for ip in $(dig +short myip.opendns.com @resolver1.opendns.com; echo $4); do
 	for port in ${PORTS[@]}; do
 	  if [ eval $(wget --quiet -O /tmp/$port.txt https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=$ip&port=$port) ]; then
 		cat /tmp/$port.txt >> $LISTDIR/tor.txt
