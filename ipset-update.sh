@@ -10,7 +10,9 @@ LISTDIR="/var/cache/blocklists"
 [ ! -d $LISTDIR ] && mkdir $LISTDIR
 
 # countries to block, must be lcase
-COUNTRIES=(tr cn sa sy ru ua hk id jp)
+COUNTRIES_BL=(tr cn sa sy ru ua hk id jp)
+COUNTRIES_WL=(us ca gb)
+
 
 # bluetack lists to use - they now obfuscate these so get them from
 # https://www.iblocklist.com/lists.php
@@ -29,7 +31,8 @@ PORTS=(80 443 8080 21 12000 12001 12002 12003)
 ENABLE_BLUETACK=1
 
 # enable country blocks?
-ENABLE_COUNTRY=1
+ENABLE_COUNTRY_BL=1
+ENABLE_COUNTRY_WL=1
 
 # enable tor blocks?
 ENABLE_TORBLOCK=1
@@ -103,18 +106,17 @@ if [ $ENABLE_BLUETACK = 1 ]; then
 
 fi
 
-if [ $ENABLE_COUNTRY = 1 ]; then
+if [ $ENABLE_COUNTRY_BL = 1 ]; then
   # get the country lists and cat them into a single file
-  for country in ${COUNTRIES[@]}; do
-	if [ eval $(wget --quiet -O /tmp/$country.txt http://www.ipdeny.com/ipblocks/data/countries/$country.zone) ]; then
-	  cat /tmp/$country.txt >> $LISTDIR/countries.txt
-	  rm /tmp/$country.txt
+  for country_bl in ${COUNTRIES_BL[@]}; do
+	if [ eval $(wget --quiet -O /tmp/$country_bl.txt http://www.ipdeny.com/ipblocks/data/countries/$country_bl.zone) ]; then
+	  cat /tmp/$country_bl.txt >> $LISTDIR/country_blacklist.txt
+	  rm /tmp/$country_bl.txt
 	fi
   done
   
-  importList "countries" 0
+  importList "country_blacklist" 0
 fi
-
 
 if [ $ENABLE_TORBLOCK = 1 ]; then
   # get the tor lists and cat them into a single file
@@ -135,7 +137,7 @@ if [ $ENABLE_BLACKLIST = 1 ]; then
 fi
 
 
-importWhitelist(){
+importWhitelists(){
 if [[ $ENABLE_WHITELIST = 1 ]]; then
 	  if [ -f $LISTDIR/whitelist/whitelist.txt ]; then
 		echo "Importing whitelist accepts..."
@@ -159,6 +161,31 @@ if [[ $ENABLE_WHITELIST = 1 ]]; then
 		echo "List whitelist.txt does not exist."
 	  fi
 fi
+if [[ $ENABLE_COUNTRY_WL = 1 ]]; then
+  for country_wl in ${COUNTRIES_WL[@]}; do
+        if [ eval $(wget --quiet -O /tmp/$country_wl.txt http://www.ipdeny.com/ipblocks/data/countries/$country_wl.zone) ]; then
+          cat /tmp/$country_wl.txt >> $LISTDIR/country_whitelist.txt
+          rm /tmp/$country_wl.txt
+        fi
+  done
+                ipset create -exist country_whitelist hash:net maxelem 4294967295
+                ipset create -exist country_whitelist-TMP hash:net maxelem 4294967295
+                ipset flush country_whitelist-TMP &> /dev/null
+
+		awk '!x[$0]++' $LISTDIR/country_whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ country_whitelist\-TMP\ /" | ipset restore
+
+                ipset swap country_whitelist country_whitelist-TMP &> /dev/null
+                ipset destroy country_whitelist-TMP &> /dev/null
+
+                # only create if the iptables rules don't already exist
+                if ! echo $IPTABLES|grep -q "country_whitelist"; then
+                  iptables -I INPUT -m set --match-set country_whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
+                  iptables -I OUTPUT -m set --match-set country_whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
+                fi
+
+          else
+                echo "Something went wrong while configuring the country_whitelist"
+          fi
 }
 
-importWhitelist
+importWhitelists
