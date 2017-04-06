@@ -3,6 +3,21 @@
 # ipset-update.sh (C) 2012-2015 Matt Parnell http://www.mattparnell.com
 # Licensed under the GNU-GPLv2+
 
+#where are our executables?
+IPSET=ipset
+IPTABLES=iptables
+PG2IPSET=pg2ipset
+
+function whereisit {
+[[ $(type -P "$@") ]] && echo "$@ is in PATH"  ||
+    { echo "$@ is NOT in PATH" 1>&2; exit 1; }
+}
+
+whereisit $IPSET
+whereisit $IPTABLES
+whereisit $PG2IPSET
+
+
 # place to keep our cached blocklists
 LISTDIR="/var/cache/blocklists"
 
@@ -43,38 +58,38 @@ ENABLE_WHITELIST=1
 # enable blacklist? add blacklist to $LISTDIR/blacklist.txt
 ENABLE_BLACKLIST=1
 
-#cache a copy of the iptables rules
-IPTABLES=$(iptables-save)
+#cache a copy of the $iptables rules
+IPTABLES=$($iptables-save)
 
 importList(){
   if [ -f $LISTDIR/$1.txt ] || [ -f $LISTDIR/$1.gz ]; then
 	echo "Importing $1 blocks..."
 	
-	ipset create -exist $1 hash:net maxelem 4294967295
-	ipset create -exist $1-TMP hash:net maxelem 4294967295
-	ipset flush $1-TMP &> /dev/null
+	$IPSET create -exist $1 hash:net maxelem 4294967295
+	$IPSET create -exist $1-TMP hash:net maxelem 4294967295
+	$IPSET flush $1-TMP &> /dev/null
 
 	#the second param determines if we need to use zcat or not
 	if [ $2 = 1 ]; then
-		zcat $LISTDIR/$1.gz | grep  -v \# | grep -v ^$ | grep -v 127\.0\.0 | pg2ipset - - $1-TMP | ipset restore
+		zcat $LISTDIR/$1.gz | grep  -v \# | grep -v ^$ | grep -v 127\.0\.0 | pg2$IPSET - - $1-TMP | $IPSET restore
 	else
-		awk '!x[$0]++' $LISTDIR/$1.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ $1\-TMP\ /" | ipset restore
+		awk '!x[$0]++' $LISTDIR/$1.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ $1\-TMP\ /" | $IPSET restore
 	fi
 	
-	ipset swap $1 $1-TMP &> /dev/null
-	ipset destroy $1-TMP &> /dev/null
+	$IPSET swap $1 $1-TMP &> /dev/null
+	$IPSET destroy $1-TMP &> /dev/null
 	
-	# only create if the iptables rules don't already exist
+	# only create if the $iptables rules don't already exist
 	if ! echo $IPTABLES|grep -q "\-A\ INPUT\ \-m\ set\ \-\-match\-set\ $1\ src\ \-\j\ DROP"; then
-          iptables -I INPUT -m set --match-set $1 src -j ULOG --ulog-prefix "Blocked input $1"
-          iptables -A FORWARD -m set --match-set $1 src -j ULOG --ulog-prefix "Blocked fwd $1"
-          iptables -A FORWARD -m set --match-set $1 dst -j ULOG --ulog-prefix "Blocked fwd $1"
-          iptables -I OUTPUT -m set --match-set $1 dst -j ULOG --ulog-prefix "Blocked out $1"
+          $iptables -I INPUT -m set --match-set $1 src -j ULOG --ulog-prefix "Blocked input $1"
+          $iptables -A FORWARD -m set --match-set $1 src -j ULOG --ulog-prefix "Blocked fwd $1"
+          $iptables -A FORWARD -m set --match-set $1 dst -j ULOG --ulog-prefix "Blocked fwd $1"
+          $iptables -I OUTPUT -m set --match-set $1 dst -j ULOG --ulog-prefix "Blocked out $1"
 
-	  iptables -I INPUT -m set --match-set $1 src -j DROP
-	  iptables -A FORWARD -m set --match-set $1 src -j DROP
-	  iptables -A FORWARD -m set --match-set $1 dst -j REJECT
-	  iptables -I OUTPUT -m set --match-set $1 dst -j REJECT
+	  $iptables -I INPUT -m set --match-set $1 src -j DROP
+	  $iptables -A FORWARD -m set --match-set $1 src -j DROP
+	  $iptables -A FORWARD -m set --match-set $1 dst -j REJECT
+	  $iptables -I OUTPUT -m set --match-set $1 dst -j REJECT
 	fi
   else
 	echo "List $1.txt does not exist."
@@ -84,7 +99,7 @@ importList(){
 if [ $ENABLE_BLUETACK = 1 ]; then
   # get, parse, and import the bluetack lists
   # they are special in that they are gz compressed and require
-  # pg2ipset to be inserted
+  # pg2$IPSET to be inserted
 
 # Stop fail2ban to ensure rules are sent to top of list
 
@@ -142,19 +157,19 @@ if [[ $ENABLE_WHITELIST = 1 ]]; then
 	  if [ -f $LISTDIR/whitelist/whitelist.txt ]; then
 		echo "Importing whitelist accepts..."
 		
-		ipset create -exist whitelist hash:net maxelem 4294967295
-		ipset create -exist whitelist-TMP hash:net maxelem 4294967295
-		ipset flush whitelist-TMP &> /dev/null
+		$IPSET create -exist whitelist hash:net maxelem 4294967295
+		$IPSET create -exist whitelist-TMP hash:net maxelem 4294967295
+		$IPSET flush whitelist-TMP &> /dev/null
 
-		awk '!x[$0]++' $LISTDIR/whitelist/whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ whitelist\-TMP\ /" | ipset restore
+		awk '!x[$0]++' $LISTDIR/whitelist/whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ whitelist\-TMP\ /" | $IPSET restore
 		
-		ipset swap whitelist whitelist-TMP &> /dev/null
-		ipset destroy whitelist-TMP &> /dev/null
+		$IPSET swap whitelist whitelist-TMP &> /dev/null
+		$IPSET destroy whitelist-TMP &> /dev/null
 		
-		# only create if the iptables rules don't already exist
+		# only create if the $iptables rules don't already exist
 		if ! echo $IPTABLES|grep -q "whitelist"; then
-		  iptables -I INPUT -m set --match-set whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
-		  iptables -I OUTPUT -m set --match-set whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
+		  $iptables -I INPUT -m set --match-set whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
+		  $iptables -I OUTPUT -m set --match-set whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
 		fi
 
 	  else
@@ -168,19 +183,19 @@ if [[ $ENABLE_COUNTRY_WL = 1 ]]; then
           rm /tmp/$country_wl.txt
         fi
   done
-                ipset create -exist country_whitelist hash:net maxelem 4294967295
-                ipset create -exist country_whitelist-TMP hash:net maxelem 4294967295
-                ipset flush country_whitelist-TMP &> /dev/null
+                $IPSET create -exist country_whitelist hash:net maxelem 4294967295
+                $IPSET create -exist country_whitelist-TMP hash:net maxelem 4294967295
+                $IPSET flush country_whitelist-TMP &> /dev/null
 
-		awk '!x[$0]++' $LISTDIR/country_whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ country_whitelist\-TMP\ /" | ipset restore
+		awk '!x[$0]++' $LISTDIR/country_whitelist.txt | grep  -v \# | grep -v ^$ |  grep -v 127\.0\.0 | sed -e "s/^/add\ \-exist\ country_whitelist\-TMP\ /" | $IPSET restore
 
-                ipset swap country_whitelist country_whitelist-TMP &> /dev/null
-                ipset destroy country_whitelist-TMP &> /dev/null
+                $IPSET swap country_whitelist country_whitelist-TMP &> /dev/null
+                $IPSET destroy country_whitelist-TMP &> /dev/null
 
-                # only create if the iptables rules don't already exist
+                # only create if the $iptables rules don't already exist
                 if ! echo $IPTABLES|grep -q "country_whitelist"; then
-                  iptables -I INPUT -m set --match-set country_whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
-                  iptables -I OUTPUT -m set --match-set country_whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
+                  $iptables -I INPUT -m set --match-set country_whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
+                  $iptables -I OUTPUT -m set --match-set country_whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
                 fi
 
           else
