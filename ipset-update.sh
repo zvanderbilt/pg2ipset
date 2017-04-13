@@ -4,18 +4,19 @@
 # Licensed under the GNU-GPLv2+
 
 #where are our executables?
-IPSET=ipset
-IPTABLES=iptables
-PG2IPSET=pg2ipset
 
 function whereisit {
 [[ $(type -P "$@") ]] && echo "$@ is in PATH"  ||
     { echo "$@ is NOT in PATH" 1>&2; exit 1; }
 }
 
-whereisit $IPSET
-whereisit $IPTABLES
-whereisit $PG2IPSET
+whereisit ipset 
+whereisit iptables 
+whereisit pg2ipset 
+
+IPSET=`type -P ipset`
+IPTABLES=`type -P iptables`
+PG2IPSET=`type -p pg2ipset`
 
 
 # place to keep our cached blocklists
@@ -46,14 +47,16 @@ PORTS=(80 443 8080 21 12000 12001 12002 12003)
 ENABLE_BLUETACK=1
 
 # enable country blocks?
-ENABLE_COUNTRY_BL=1
-ENABLE_COUNTRY_WL=1
+ENABLE_COUNTRY_BL=0
+
+#enable country whitelist for http/https?
+ENABLE_COUNTRY_WL=0
 
 # enable tor blocks?
 ENABLE_TORBLOCK=1
 
 # enable whitelist? add whitelist to $LISTDIR/whitelist/whitelist.txt
-ENABLE_WHITELIST=1
+ENABLE_WHITELIST=0
 
 # enable blacklist? add blacklist to $LISTDIR/blacklist.txt
 ENABLE_BLACKLIST=1
