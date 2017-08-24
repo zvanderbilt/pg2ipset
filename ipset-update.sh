@@ -35,7 +35,7 @@ COUNTRIES_WL=(us ca gb)
 BLUETACKALIAS=(DShield Hijacked DROP ForumSpam WebExploit Proxies BadSpiders CruzIT Zeus Palevo Malicious Malcode Adservers)
 BLUETACK=(xpbqleszmajjesnzddhv usrcshglbiilevmyfhse zbdlwrqkabxbcppvrnos ficutxiwawokxlcyoeye ghlzqtqxnzctvvajwwag xoebmbyexwuiogmbyprb mcvxsnihddgutbjfbghy czvaehmjpsnwwttrdoyl ynkdjqsjyfmilsgbogqf erqajhwrxiuvjxqrrwfj npkuuhuxcsllnhoamkvm pbqcylkejciyhmwttify zhogegszwduurnvsyhdf) 
 # ports to block tor users from
-PORTS=(80 443 8080 21 12000 12001 12002 12003)
+PORTS=(80 443)
 
 # remove old countries list
 [ -f $LISTDIR/countries.txt ] && rm $LISTDIR/countries.txt
@@ -47,19 +47,19 @@ PORTS=(80 443 8080 21 12000 12001 12002 12003)
 ENABLE_BLUETACK=1
 
 # enable country blocks?
-ENABLE_COUNTRY_BL=1
+ENABLE_COUNTRY_BL=0
 
 #enable country whitelist for http/https?
-ENABLE_COUNTRY_WL=1
+ENABLE_COUNTRY_WL=0
 
 # enable tor blocks?
-ENABLE_TORBLOCK=1
+ENABLE_TORBLOCK=0
 
 # enable whitelist? add whitelist to $LISTDIR/whitelist/whitelist.txt
-ENABLE_WHITELIST=1
+ENABLE_WHITELIST=0
 
 # enable blacklist? add blacklist to $LISTDIR/blacklist.txt
-ENABLE_BLACKLIST=1
+ENABLE_BLACKLIST=0
 
 #cache a copy of the $IPTABLES rules
 IPTABLES=$(iptables-save)
