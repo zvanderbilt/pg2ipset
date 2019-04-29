@@ -84,8 +84,8 @@ if [[ $ENABLE_COUNTRY_WL = 1 ]]; then
 
                 # only create if the IPTABLES rules don't already exist
                 if ! echo $IPTABLES|grep -q "country_whitelist"; then
-                  iptables -I INPUT -m set --match-set country_whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
-                  iptables -I OUTPUT -m set --match-set country_whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
+                  iptables -A INPUT -m set --match-set country_whitelist src -p tcp -m multiport --dports http,https -j ACCEPT
+                  iptables -A OUTPUT -m set --match-set country_whitelist dst -p tcp -m multiport --sports http,https -j ACCEPT
                 fi
 		if [[ $(ps -ef | grep -v grep | grep fail2ban | wc -l) == 1 ]]; then
 			service fail2ban restart
@@ -166,7 +166,7 @@ fi
 
 if [ $ENABLE_TORBLOCK = 1 ]; then
   # get the tor lists and cat them into a single file
-  for ip in $(dig +short myip.opendns.com @resolver1.opendns.com; echo $4); do
+  for ip in $(curl 'https://api.ipify.org?format=txt'); do
 	for port in ${PORTS[@]}; do
 	  if [ eval $(wget --quiet -O /tmp/$port.txt https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip=$ip&port=$port) ]; then
 		cat /tmp/$port.txt >> $LISTDIR/tor.txt
