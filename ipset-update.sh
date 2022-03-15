@@ -49,10 +49,10 @@ PORTS=(80 443)
 [ -f $LISTDIR/ec2-ranges.txt ] && rm $LISTDIR/ec2-ranges.txt
 
 # remove the old gcp node list
-[ -f $LISTDIR/gcp.txt ] && rm $LISTDIR/gcp.txt
+[ -f $LISTDIR/gcp.txt ] && rm $LISTDIR/gcp-ranges.txt
 
 # remove the old msft node list
-[ -f $LISTDIR/azure.txt ] && rm $LISTDIR/azure.txt
+[ -f $LISTDIR/azure.txt ] && rm $LISTDIR/azure-ranges.txt
 
 # remove the old digitalocean node list
 [ -f $LISTDIR/do-ranges.txt ] && rm $LISTDIR/do-ranges.txt
@@ -76,13 +76,13 @@ ENABLE_WHITELIST=0
 # enable blocklist? add blocklist to $LISTDIR/blocklist.txt
 ENABLE_BLOCKLIST=0
 
-ENABLE_DO_BLOCKLIST=1
+ENABLE_DO_BLOCKLIST=0
 
-ENABLE_EC2_BLOCKLIST=1
+ENABLE_EC2_BLOCKLIST=0
 
-ENABLE_GCP_BLOCKLIST=1
+ENABLE_GCP_BLOCKLIST=0
 
-ENABLE_AZURE_BLOCKLIST=1
+ENABLE_AZURE_BLOCKLIST=0
 
 #cache a copy of the $IPTABLES rules
 IPTABLES=$(iptables-save)
